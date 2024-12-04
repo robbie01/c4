@@ -1,0 +1,12 @@
+[package]
+name = "c4"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nalgebra = { version = "0.33", features = ["bytemuck"] }
+winit = "0.30"
+wgpu = "23"
+pollster = "0.4"
+anyhow = "1"
+bytemuck = { version = "1.20", features = ["derive"] }

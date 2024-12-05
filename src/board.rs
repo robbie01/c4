@@ -2,8 +2,7 @@ use std::{mem, num::NonZero};
 
 use bytemuck::{Pod, Zeroable, cast_slice, cast_slice_mut};
 use nalgebra::{Matrix4, Point3, Translation3};
-use util::{BufferInitDescriptor, DeviceExt, TextureDataOrder};
-use wgpu::*;
+use wgpu::{*, util::{BufferInitDescriptor, DeviceExt as _}};
 
 const ROWS: usize = 6;
 const COLS: usize = 7;
@@ -116,7 +115,6 @@ enum Tile {
 // TODO: coalesce buffers (all have constant size)
 #[derive(Debug)]
 pub struct Board {
-    board_tex_bg: BindGroup,
     board_pip: RenderPipeline,
     board_vertices: Buffer,
 
@@ -131,80 +129,11 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(dev: &Device, q: &Queue, fmt: TextureFormat, camera_bgl: &BindGroupLayout) -> Self {
-        const C4: &[u8] = include_bytes!("connect4.png");
-
-        let mut c4 = C4;
-        let mut re = png::Decoder::new(&mut c4).read_info().unwrap();
-        let mut data = [0u8; 4*64*64];
-        re.next_frame(&mut data).unwrap();
-        let i = re.info();
-
-        let board_tex = dev.create_texture_with_data(
-            q,
-            &TextureDescriptor {
-                label: None,
-                size: Extent3d {
-                    width: i.width,
-                    height: i.height,
-                    depth_or_array_layers: 1
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: TextureDimension::D2,
-                format: TextureFormat::Rgba8UnormSrgb,
-                usage: TextureUsages::TEXTURE_BINDING,
-                view_formats: &[]
-            },
-            TextureDataOrder::LayerMajor,
-            &data
-        );
-
-        let board_tex_bgl = dev.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: None,
-            entries: &[BindGroupLayoutEntry {
-                binding: 0,
-                visibility: ShaderStages::FRAGMENT,
-                ty: BindingType::Texture {
-                    sample_type: TextureSampleType::Float { filterable: true },
-                    view_dimension: TextureViewDimension::D2,
-                    multisampled: false
-                },
-                count: None
-            },
-            BindGroupLayoutEntry {
-                binding: 1,
-                visibility: ShaderStages::FRAGMENT,
-                ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                count: None
-            }]
-        });
-
-        let board_tex_bg = dev.create_bind_group(&BindGroupDescriptor {
-            label: None,
-            layout: &board_tex_bgl,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::TextureView(&board_tex.create_view(&TextureViewDescriptor::default()))
-            },
-            BindGroupEntry {
-                binding: 1,
-                resource: BindingResource::Sampler(&dev.create_sampler(&SamplerDescriptor {
-                    address_mode_u: AddressMode::Repeat,
-                    address_mode_v: AddressMode::Repeat,
-                    address_mode_w: AddressMode::ClampToEdge,
-                    mag_filter: FilterMode::Linear,
-                    min_filter: FilterMode::Linear,
-                    mipmap_filter: FilterMode::Nearest,
-                    ..Default::default()
-                }))
-            }]
-        });
-
+    pub fn new(dev: &Device, _q: &Queue, fmt: TextureFormat, camera_bgl: &BindGroupLayout) -> Self {
         let board_shader = dev.create_shader_module(include_wgsl!("board.wgsl"));
         let board_ppl = dev.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[camera_bgl, &board_tex_bgl],
+            bind_group_layouts: &[camera_bgl],
             push_constant_ranges: &[]
         });
         let board_pip = dev.create_render_pipeline(&RenderPipelineDescriptor {
@@ -337,7 +266,7 @@ impl Board {
         // tiles[0][0] = Some(Tile::Red);
         // tiles[1][2] = Some(Tile::Yellow);
 
-        Self { board_tex_bg, board_pip, board_vertices, tile_pip, tile_vertices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red }
+        Self { board_pip, board_vertices, tile_pip, tile_vertices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red }
     }
 
     fn column_from_ndc(x: f32, y: f32, view_proj_inv: &Matrix4<f32>) -> Option<u8> {
@@ -434,7 +363,6 @@ impl Board {
         rpass.set_pipeline(&self.board_pip);
         rpass.set_vertex_buffer(0, self.board_vertices.slice(..));
         rpass.set_bind_group(0, camera_bg, &[]);
-        rpass.set_bind_group(1, &self.board_tex_bg, &[]);
         rpass.draw(0..BOARD_VERTICES.len() as u32, 0..1);
     }
 }

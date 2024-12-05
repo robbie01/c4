@@ -4,7 +4,7 @@ use pollster::FutureExt;
 use wgpu::*;
 use winit::{dpi::PhysicalSize, window::Window};
 
-use crate::{board::Vertex, camera::Camera};
+use crate::{board::Board, camera::Camera};
 
 #[derive(Debug)]
 pub struct State {
@@ -13,8 +13,10 @@ pub struct State {
     cfg: SurfaceConfiguration,
     dev: Device,
     q: Queue,
-    pip: RenderPipeline,
-    cam: Camera
+    cam: Camera,
+    bd: Board,
+    pub horiz_right: bool,
+    pub horiz_left: bool
 }
 
 impl State {
@@ -41,55 +43,14 @@ impl State {
 
         let aspect = sz.width as f32 / sz.height as f32;
 
-        let shader = dev.create_shader_module(include_wgsl!("shader.wgsl"));
-        let layout = dev.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: None,
-            bind_group_layouts: &[],
-            push_constant_ranges: &[]
-        });
-        let pip = dev.create_render_pipeline(&RenderPipelineDescriptor {
-            label: None,
-            layout: Some(&layout),
-            vertex: VertexState {
-                module: &shader,
-                entry_point: None,
-                buffers: &[VertexBufferLayout {
-                    array_stride: std::mem::size_of::<Vertex>() as BufferAddress,
-                    step_mode: VertexStepMode::Vertex,
-                    attributes: &vertex_attr_array![0 => Float32x3, 1 => Float32x3],
-                }],
-                compilation_options: PipelineCompilationOptions::default()
-            },
-            fragment: Some(FragmentState {
-                module: &shader,
-                entry_point: None,
-                targets: &[Some(ColorTargetState {
-                    format: cfg.format,
-                    blend: Some(BlendState::REPLACE),
-                    write_mask: ColorWrites::ALL,
-                })],
-                compilation_options: PipelineCompilationOptions::default()
-            }),
-            primitive: PrimitiveState {
-                topology: PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: FrontFace::Cw,
-                cull_mode: Some(Face::Back),
-                polygon_mode: PolygonMode::Fill,
-                unclipped_depth: false,
-                conservative: false
-            },
-            depth_stencil: None,
-            multisample: MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false
-            },
-            multiview: None,
-            cache: None
-        });
+        let cam = Camera::new(&dev, aspect);
+        let bd = Board::new(&dev, &q, cfg.format, cam.bind_group_layout());
 
-        Self { win, sfc, dev, q, cam: Camera::new(aspect), cfg, pip }
+        Self {
+            win, sfc, dev, q, cam, cfg, bd,
+            horiz_right: false,
+            horiz_left: false
+        }
     }
 
     pub fn win(&self) -> &Window {
@@ -106,6 +67,13 @@ impl State {
     }
 
     pub fn render(&mut self) {
+        let angle_mag = 0.02;
+        let angle_delta = angle_mag * self.horiz_right as i8 as f32 - angle_mag * self.horiz_left as i8 as f32;
+        self.cam.add_angle(angle_delta);
+
+        let camerabg = self.cam.bind_group(&self.q);
+        self.bd.prepare(&self.q);
+
         let tex = self.sfc.get_current_texture().unwrap();
 
         let view = tex.texture.create_view(&Default::default());
@@ -128,6 +96,7 @@ impl State {
             })],
             ..Default::default()
         });
+        self.bd.render(&mut rpass, camerabg);
         drop(rpass);
 
         self.q.submit(iter::once(enc.finish()));

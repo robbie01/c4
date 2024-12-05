@@ -1,5 +1,5 @@
 use state::State;
-use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::{ControlFlow, EventLoop}, window::Window};
+use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::{ControlFlow, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::Window};
 
 mod camera;
 mod state;
@@ -33,11 +33,22 @@ impl ApplicationHandler for App {
             },
             WindowEvent::RedrawRequested => {
                 let state = self.state.as_mut().unwrap();
-
-                state.render();
-
                 state.win().request_redraw();
+                state.render();
             },
+            WindowEvent::KeyboardInput { event, .. } => {
+                match event.physical_key {
+                    PhysicalKey::Code(KeyCode::ArrowLeft) => {
+                        let state = self.state.as_mut().unwrap();
+                        state.horiz_left = event.state.is_pressed();
+                    },
+                    PhysicalKey::Code(KeyCode::ArrowRight) => {
+                        let state = self.state.as_mut().unwrap();
+                        state.horiz_right = event.state.is_pressed();
+                    },
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }

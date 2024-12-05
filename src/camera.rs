@@ -54,7 +54,7 @@ impl Camera {
         });
 
         Self {
-            eye: Point3::new(0., 0., 16.),
+            eye: Point3::new(0., 0., 12.),
             angle: 1.,
             target: Point3::origin(),
             up: UnitVector3::new_unchecked(Vector3::y()),

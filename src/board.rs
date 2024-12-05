@@ -139,7 +139,6 @@ impl Board {
         let mut data = [0u8; 4*64*64];
         re.next_frame(&mut data).unwrap();
         let i = re.info();
-        println!("{i:?}");
 
         let board_tex = dev.create_texture_with_data(
             q,

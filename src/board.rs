@@ -234,7 +234,14 @@ impl Board {
                 polygon_mode: PolygonMode::Fill,
                 ..Default::default()
             },
-            depth_stencil: None,
+            // Always draw on top of everything
+            depth_stencil: Some(DepthStencilState {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: false,
+                depth_compare: CompareFunction::Always,
+                stencil: Default::default(),
+                bias: Default::default()
+            }),
             multisample: Default::default(),
             multiview: None,
             cache: None
@@ -297,7 +304,13 @@ impl Board {
                 polygon_mode: PolygonMode::Fill,
                 ..Default::default()
             },
-            depth_stencil: None,
+            depth_stencil: Some(DepthStencilState {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: CompareFunction::Less,
+                stencil: Default::default(),
+                bias: Default::default()
+            }),
             multisample: Default::default(),
             multiview: None,
             cache: None

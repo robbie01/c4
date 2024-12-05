@@ -13,7 +13,9 @@ pub struct Camera {
     proj: Perspective3<f32>,
     buf: Buffer,
     bgl: BindGroupLayout,
-    bg: BindGroup
+    bg: BindGroup,
+    cached_view_proj: Matrix4<f32>,
+    needs_update: bool
 }
 
 impl Camera {
@@ -56,34 +58,41 @@ impl Camera {
             target: Point3::origin(),
             up: UnitVector3::new_unchecked(Vector3::y()),
             proj: Perspective3::new(aspect, 45. * PI / 180., 0.1, 100.),
-            buf, bgl, bg
+            buf, bgl, bg,
+            cached_view_proj: Matrix4::identity(),
+            needs_update: true
         }
     }
 
     pub fn add_angle(&mut self, angle: f32) {
         self.angle = (self.angle + angle) % (2. * PI);
+        self.needs_update = true;
     }
 
     pub fn set_aspect(&mut self, aspect: f32) {
         self.proj.set_aspect(aspect);
+        self.needs_update = true;
     }
 
-    // TODO: cache this
-    pub fn view_proj(&self) -> Matrix4<f32> {
-        let rot = UnitQuaternion::from_axis_angle(&self.up, self.angle);
-        let eye = Isometry3::rotation_wrt_point(rot, self.target) * &self.eye;
-        let view = Matrix4::look_at_rh(&eye, &self.target, &self.up);
-
-        self.proj.as_matrix() * view
+    pub fn view_proj(&mut self) -> Matrix4<f32> {
+        if self.needs_update {
+            let rot = UnitQuaternion::from_axis_angle(&self.up, self.angle);
+            let eye = Isometry3::rotation_wrt_point(rot, self.target) * &self.eye;
+            let view = Matrix4::look_at_rh(&eye, &self.target, &self.up);
+            self.cached_view_proj = self.proj.as_matrix() * view;
+            self.needs_update = false;
+        }
+        self.cached_view_proj
     }
 
     pub fn bind_group_layout(&self) -> &BindGroupLayout {
         &self.bgl
     }
 
-    pub fn bind_group<'a>(&self, q: &'a Queue) -> &BindGroup {
+    pub fn bind_group<'a>(&mut self, q: &'a Queue) -> &BindGroup {
+        let view_proj = self.view_proj();
         let mut view = q.write_buffer_with(&self.buf, 0, NonZeroU64::new(self.buf.size()).unwrap()).unwrap();
-        *from_bytes_mut(&mut view) = self.view_proj();
+        *from_bytes_mut(&mut view) = view_proj;
         &self.bg
     }
 }

@@ -11,6 +11,9 @@ pub struct State {
     win: Arc<Window>,
     sfc: Surface<'static>,
     cfg: SurfaceConfiguration,
+    depth_cfg: TextureDescriptor<'static>,
+    depth: Texture,
+    depth_view: TextureView,
     dev: Device,
     q: Queue,
     cam: Camera,
@@ -42,13 +45,31 @@ impl State {
         let (dev, q) = adpt.request_device(&Default::default(), None).block_on().unwrap();
         sfc.configure(&dev, &cfg);
 
+        let depth_cfg = TextureDescriptor {
+            label: None,
+            size: Extent3d {
+                width: cfg.width,
+                height: cfg.height,
+                depth_or_array_layers: 1
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Depth32Float,
+            usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+            view_formats: &[]
+        };
+
+        let depth = dev.create_texture(&depth_cfg);
+        let depth_view = depth.create_view(&Default::default());
+
         let aspect = sz.width as f32 / sz.height as f32;
 
         let cam = Camera::new(&dev, aspect);
         let bd = Board::new(&dev, &q, cfg.format, cam.bind_group_layout());
 
         Self {
-            win, sfc, dev, q, cam, cfg, bd,
+            win, sfc, dev, q, cam, cfg, bd, depth_cfg, depth, depth_view,
             horiz_right: false,
             horiz_left: false,
             last_mouse: None
@@ -66,6 +87,11 @@ impl State {
         self.cfg.width = sz.width;
         self.cfg.height = sz.height;
         self.sfc.configure(&self.dev, &self.cfg);
+
+        self.depth_cfg.size.width = sz.width;
+        self.depth_cfg.size.height = sz.height;
+        self.depth = self.dev.create_texture(&self.depth_cfg);
+        self.depth_view = self.depth.create_view(&Default::default());
         
         if let Some(pos) = self.last_mouse {
             self.mouse_move(pos);
@@ -123,6 +149,14 @@ impl State {
                     store: StoreOp::Store
                 }
             })],
+            depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                view: &self.depth_view,
+                depth_ops: Some(Operations {
+                    load: LoadOp::Clear(1.),
+                    store: StoreOp::Store
+                }),
+                stencil_ops: None
+            }),
             ..Default::default()
         });
         self.bd.render(&mut rpass, camerabg);

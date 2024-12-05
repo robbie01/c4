@@ -154,7 +154,7 @@ impl Board {
                 entry_point: None,
                 targets: &[Some(ColorTargetState {
                     format: fmt,
-                    blend: Some(BlendState::ALPHA_BLENDING),
+                    blend: Some(BlendState::REPLACE),
                     write_mask: ColorWrites::ALL,
                 })],
                 compilation_options: PipelineCompilationOptions::default()

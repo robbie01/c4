@@ -1,5 +1,5 @@
 use state::State;
-use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::{ControlFlow, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::Window};
+use winit::{application::ApplicationHandler, event::{ElementState, MouseButton, WindowEvent}, event_loop::{ControlFlow, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::Window};
 
 mod camera;
 mod state;
@@ -12,7 +12,9 @@ struct App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let win = event_loop.create_window(Window::default_attributes()).unwrap();
+        let win = event_loop.create_window(Window::default_attributes()
+            .with_title("Connect 4")
+        ).unwrap();
         self.state = Some(State::new(win));
     }
 
@@ -47,6 +49,17 @@ impl ApplicationHandler for App {
                         state.horiz_right = event.state.is_pressed();
                     },
                     _ => {}
+                }
+            },
+            WindowEvent::CursorMoved { position, .. } => {
+                let state = self.state.as_mut().unwrap();
+                state.mouse_move(position);
+            },
+            WindowEvent::MouseInput { button, state: estate, .. } => {
+                let state = self.state.as_mut().unwrap();
+                
+                if button == MouseButton::Left && estate == ElementState::Pressed {
+                    state.mouse_click();
                 }
             }
             _ => {}

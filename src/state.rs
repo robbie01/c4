@@ -2,7 +2,7 @@ use std::{iter, sync::Arc};
 
 use pollster::FutureExt;
 use wgpu::*;
-use winit::{dpi::PhysicalSize, window::Window};
+use winit::{dpi::{PhysicalPosition, PhysicalSize}, window::Window};
 
 use crate::{board::Board, camera::Camera};
 
@@ -15,6 +15,7 @@ pub struct State {
     q: Queue,
     cam: Camera,
     bd: Board,
+    last_mouse: Option<PhysicalPosition<f64>>,
     pub horiz_right: bool,
     pub horiz_left: bool
 }
@@ -49,7 +50,8 @@ impl State {
         Self {
             win, sfc, dev, q, cam, cfg, bd,
             horiz_right: false,
-            horiz_left: false
+            horiz_left: false,
+            last_mouse: None
         }
     }
 
@@ -64,12 +66,39 @@ impl State {
         self.cfg.width = sz.width;
         self.cfg.height = sz.height;
         self.sfc.configure(&self.dev, &self.cfg);
+        
+        if let Some(pos) = self.last_mouse {
+            self.mouse_move(pos);
+        }
+    }
+
+    fn update_preview(&mut self) {
+        if let Some(pos) = self.last_mouse {
+            let sz = self.win.inner_size();
+            let x = pos.x as f32 / sz.width as f32 * 2. - 1.;
+            let y = 1. - pos.y as f32 / sz.height as f32 * 2.;
+            self.bd.set_preview(x, y, &self.cam.view_proj().try_inverse().unwrap());
+        }
+    }
+
+    pub fn mouse_move(&mut self, pos: PhysicalPosition<f64>) {
+        self.last_mouse = Some(pos);
+    }
+
+    pub fn mouse_click(&mut self) {
+        let Some(pos) = self.last_mouse else { return };
+        let sz = self.win.inner_size();
+        let x = pos.x as f32 / sz.width as f32 * 2. - 1.;
+        let y = 1. - pos.y as f32 / sz.height as f32 * 2.;
+        self.bd.drop_tile(x, y, &self.cam.view_proj().try_inverse().unwrap());
     }
 
     pub fn render(&mut self) {
         let angle_mag = 0.02;
         let angle_delta = angle_mag * self.horiz_right as i8 as f32 - angle_mag * self.horiz_left as i8 as f32;
         self.cam.add_angle(angle_delta);
+
+        self.update_preview();
 
         let camerabg = self.cam.bind_group(&self.q);
         self.bd.prepare(&self.q);

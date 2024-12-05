@@ -1,7 +1,7 @@
 use std::{mem, num::NonZero};
 
 use bytemuck::{Pod, Zeroable, cast_slice, cast_slice_mut};
-use nalgebra::{Matrix4, Translation3};
+use nalgebra::{Matrix4, Point3, Translation3};
 use util::{BufferInitDescriptor, DeviceExt, TextureDataOrder};
 use wgpu::*;
 
@@ -55,7 +55,7 @@ struct TileVertex {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 struct TileInstance {
-    model: Matrix4<f32>,
+    model_mat: Matrix4<f32>,
     color: [f32; 4]
 }
 
@@ -91,6 +91,14 @@ const TILE_VERTICES: &[TileVertex] = &[
     TileVertex { position: [0.5, 0.5, 0.09] },    // top left
     TileVertex { position: [0.5, -0.5, 0.09] },   // bottom left
     TileVertex { position: [0.5, -0.5, -0.09] },  // bottom right
+
+    // Bottom (y = -0.5)
+    TileVertex { position: [-0.5, -0.5, -0.09] },  // bottom left
+    TileVertex { position: [0.5, -0.5, -0.09] },   // bottom right
+    TileVertex { position: [0.5, -0.5, 0.09] },    // top right
+    TileVertex { position: [-0.5, -0.5, -0.09] },  // bottom left
+    TileVertex { position: [0.5, -0.5, 0.09] },    // top right
+    TileVertex { position: [-0.5, -0.5, 0.09] },   // top left
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,6 +122,8 @@ pub struct Board {
     tile_instances: Buffer,
     num_tiles: usize,
 
+    preview: Option<u8>,
+    current_player: Tile,
     tiles: [[Option<Tile>; COLS]; ROWS]
 }
 
@@ -301,35 +311,90 @@ impl Board {
 
         let tile_instances = dev.create_buffer(&BufferDescriptor {
             label: None,
-            size: (mem::size_of::<TileInstance>()*ROWS*COLS) as u64,
+            size: (mem::size_of::<TileInstance>()*(ROWS*COLS+1)) as u64,
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             mapped_at_creation: false
         });
 
-        let mut tiles: [[Option<Tile>; 7]; 6] = Default::default();
+        let tiles = Default::default();
 
-        tiles[0][0] = Some(Tile::Red);
-        tiles[1][2] = Some(Tile::Yellow);
+        // tiles[0][0] = Some(Tile::Red);
+        // tiles[1][2] = Some(Tile::Yellow);
 
-        Self { board_tex_bg, board_pip, board_vertices, tile_pip, tile_vertices, tile_instances, tiles, num_tiles: 0 }
+        Self { board_tex_bg, board_pip, board_vertices, tile_pip, tile_vertices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red }
+    }
+
+    fn column_from_ndc(x: f32, y: f32, view_proj_inv: &Matrix4<f32>) -> Option<u8> {
+        // X and Y are NDC
+        // Sets self.preview to Some(0..7) if the mouse is over the board and None otherwise
+        // Uses raycasting to intersect with z=0 plane
+
+        let near = view_proj_inv.transform_point(&Point3::new(x, y, -1.));
+        let far = view_proj_inv.transform_point(&Point3::new(x, y, 1.));
+
+        // Find point collinear to near and far such that z=0
+        let dir = far - near;
+        let t = -near.z / dir.z;
+        let hit = near + dir * t;
+
+        if hit.x >= -3.5 && hit.x <= 3.5 && hit.y >= -3.0 && hit.y <= 3.0 {
+            // Convert x position to column index (0-6)
+            let col = ((hit.x + 3.5) / 7.0 * COLS as f32) as u8;
+            Some(col)
+        } else {
+            None
+        }
+    }
+
+    pub fn set_preview(&mut self, x: f32, y: f32, view_proj_inv: &Matrix4<f32>) {
+        self.preview = Self::column_from_ndc(x, y, view_proj_inv);
+    }
+
+    pub fn drop_tile(&mut self, x: f32, y: f32, view_proj_inv: &Matrix4<f32>) {
+        if let Some(col) = Self::column_from_ndc(x, y, view_proj_inv) {
+            let col = col as usize;
+            for row in self.tiles.iter_mut().rev() {
+                if row[col].is_none() {
+                    row[col] = Some(self.current_player);
+                    self.current_player = match self.current_player {
+                        Tile::Red => Tile::Yellow,
+                        Tile::Yellow => Tile::Red
+                    };
+                    break;
+                }
+            }
+        }
     }
 
     pub fn prepare(&mut self, q: &Queue) {
         let mut inst_buf = q.write_buffer_with(&self.tile_instances, 0, NonZero::new(self.tile_instances.size()).unwrap()).unwrap();
-        let instances = cast_slice_mut::<_, TileInstance>(&mut inst_buf);
+        let instances = cast_slice_mut(&mut inst_buf);
 
         let mut inst = 0;
+
+        if let Some(preview) = self.preview {
+            let model_mat = Translation3::new(
+                preview as f32 - 3.,
+                4.,
+                0.
+            ).to_homogeneous();
+            instances[inst] = TileInstance {
+                model_mat,
+                color: [0.5, 0.5, 0.5, 1.]
+            };
+            inst += 1;
+        }
 
         for (i, row) in self.tiles.iter().enumerate() {
             for (j, tile) in row.iter().enumerate() {
                 if let Some(tile) = tile {
-                    let model = Translation3::new(
+                    let model_mat = Translation3::new(
                         j as f32 - 3.,
                         2.5 - i as f32,
                         0.
                     ).to_homogeneous();
                     instances[inst] = TileInstance {
-                        model,
+                        model_mat,
                         color: match tile {
                             Tile::Red => [1., 0., 0., 1.],
                             Tile::Yellow => [1., 1., 0., 1.]

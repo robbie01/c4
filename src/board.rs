@@ -5,6 +5,12 @@ use nalgebra::{Matrix4, Point3, Translation3};
 use util::{BufferInitDescriptor, DeviceExt, TextureDataOrder};
 use wgpu::*;
 
+const ROWS: usize = 6;
+const COLS: usize = 7;
+
+const HALF_ROWS: f32 = ROWS as f32 / 2.;
+const HALF_COLS: f32 = COLS as f32 / 2.;
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 struct BoardVertex {
@@ -14,36 +20,36 @@ struct BoardVertex {
 
 const BOARD_VERTICES: &[BoardVertex] = &[
     // Front
-    BoardVertex { position: [-3.5, 3., 0.1], coord: [0.0, 0.0] },  // top left
-    BoardVertex { position: [-3.5, -3., 0.1], coord: [0.0, 1.0] }, // bottom left
-    BoardVertex { position: [3.5, -3., 0.1], coord: [1.0, 1.0] },  // bottom right
-    BoardVertex { position: [-3.5, 3., 0.1], coord: [0.0, 0.0] },  // top left
-    BoardVertex { position: [3.5, -3., 0.1], coord: [1.0, 1.0] },  // bottom right
-    BoardVertex { position: [3.5, 3., 0.1], coord: [1.0, 0.0] },   // top right
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },  // top left
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, 0.1], coord: [0., ROWS as f32] }, // bottom left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [COLS as f32, ROWS as f32] },  // bottom right
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },  // top left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [COLS as f32, ROWS as f32] },  // bottom right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [COLS as f32, 0.] },   // top right
 
     // Back
-    BoardVertex { position: [-3.5, 3., -0.1], coord: [0.0, 0.0] },  // top right
-    BoardVertex { position: [3.5, -3., -0.1], coord: [1.0, 1.0] },  // bottom left
-    BoardVertex { position: [-3.5, -3., -0.1], coord: [0.0, 1.0] }, // bottom right
-    BoardVertex { position: [-3.5, 3., -0.1], coord: [0.0, 0.0] },  // top right
-    BoardVertex { position: [3.5, 3., -0.1], coord: [1.0, 0.0] },   // top left
-    BoardVertex { position: [3.5, -3., -0.1], coord: [1.0, 1.0] },  // bottom left
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [COLS as f32, 0.] },  // top right
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., ROWS as f32] },  // bottom left
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [COLS as f32, ROWS as f32] }, // bottom right
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [COLS as f32, 0.] },  // top right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.] },   // top left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., ROWS as f32] },  // bottom left
 
     // Left
-    BoardVertex { position: [-3.5, 3., -0.1], coord: [0.0, 0.0] },   // top left
-    BoardVertex { position: [-3.5, -3., -0.1], coord: [0.0, 0.0] },  // bottom left
-    BoardVertex { position: [-3.5, 3., 0.1], coord: [0.0, 0.0] },    // top right
-    BoardVertex { position: [-3.5, 3., 0.1], coord: [0.0, 0.0] },    // top right
-    BoardVertex { position: [-3.5, -3., -0.1], coord: [0.0, 0.0] },  // bottom left
-    BoardVertex { position: [-3.5, -3., 0.1], coord: [0.0, 0.0] },   // bottom right
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.] },   // top left
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom left
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top right
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top right
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom left
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, 0.1], coord: [0., 0.] },   // bottom right
 
     // Right
-    BoardVertex { position: [3.5, 3., -0.1], coord: [0.0, 0.0] },   // top right
-    BoardVertex { position: [3.5, 3., 0.1], coord: [0.0, 0.0] },    // top left
-    BoardVertex { position: [3.5, -3., -0.1], coord: [0.0, 0.0] },  // bottom right
-    BoardVertex { position: [3.5, 3., 0.1], coord: [0.0, 0.0] },    // top left
-    BoardVertex { position: [3.5, -3., 0.1], coord: [0.0, 0.0] },   // bottom left
-    BoardVertex { position: [3.5, -3., -0.1], coord: [0.0, 0.0] },  // bottom right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.] },   // top right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [0., 0.] },   // bottom left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom right
 ];
 
 #[repr(C)]
@@ -61,44 +67,44 @@ struct TileInstance {
 
 const TILE_VERTICES: &[TileVertex] = &[
     // Front
-    TileVertex { position: [-0.5, 0.5, 0.09], },  // top left
-    TileVertex { position: [-0.5, -0.5, 0.09], }, // bottom left
-    TileVertex { position: [0.5, -0.5, 0.09], },  // bottom right
-    TileVertex { position: [-0.5, 0.5, 0.09], },  // top left
-    TileVertex { position: [0.5, -0.5, 0.09], },  // bottom right
-    TileVertex { position: [0.5, 0.5, 0.09], },   // top right
+    TileVertex { position: [-0.5, 0.5, 0.1], },  // top left
+    TileVertex { position: [-0.5, -0.5, 0.1], }, // bottom left
+    TileVertex { position: [0.5, -0.5, 0.1], },  // bottom right
+    TileVertex { position: [-0.5, 0.5, 0.1], },  // top left
+    TileVertex { position: [0.5, -0.5, 0.1], },  // bottom right
+    TileVertex { position: [0.5, 0.5, 0.1], },   // top right
 
     // Back
-    TileVertex { position: [-0.5, 0.5, -0.09] },  // top right
-    TileVertex { position: [0.5, -0.5, -0.09] },  // bottom left
-    TileVertex { position: [-0.5, -0.5, -0.09] }, // bottom right
-    TileVertex { position: [-0.5, 0.5, -0.09] },  // top right
-    TileVertex { position: [0.5, 0.5, -0.09] },   // top left
-    TileVertex { position: [0.5, -0.5, -0.09] },  // bottom left
+    TileVertex { position: [-0.5, 0.5, -0.1] },  // top right
+    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom left
+    TileVertex { position: [-0.5, -0.5, -0.1] }, // bottom right
+    TileVertex { position: [-0.5, 0.5, -0.1] },  // top right
+    TileVertex { position: [0.5, 0.5, -0.1] },   // top left
+    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom left
 
     // Left
-    TileVertex { position: [-0.5, 0.5, -0.09] },   // top left
-    TileVertex { position: [-0.5, -0.5, -0.09] },  // bottom left
-    TileVertex { position: [-0.5, 0.5, 0.09] },    // top right
-    TileVertex { position: [-0.5, 0.5, 0.09] },    // top right
-    TileVertex { position: [-0.5, -0.5, -0.09] },  // bottom left
-    TileVertex { position: [-0.5, -0.5, 0.09] },   // bottom right
+    TileVertex { position: [-0.5, 0.5, -0.1] },   // top left
+    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
+    TileVertex { position: [-0.5, 0.5, 0.1] },    // top right
+    TileVertex { position: [-0.5, 0.5, 0.1] },    // top right
+    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
+    TileVertex { position: [-0.5, -0.5, 0.1] },   // bottom right
 
     // Right
-    TileVertex { position: [0.5, 0.5, -0.09] },   // top right
-    TileVertex { position: [0.5, 0.5, 0.09] },    // top left
-    TileVertex { position: [0.5, -0.5, -0.09] },  // bottom right
-    TileVertex { position: [0.5, 0.5, 0.09] },    // top left
-    TileVertex { position: [0.5, -0.5, 0.09] },   // bottom left
-    TileVertex { position: [0.5, -0.5, -0.09] },  // bottom right
+    TileVertex { position: [0.5, 0.5, -0.1] },   // top right
+    TileVertex { position: [0.5, 0.5, 0.1] },    // top left
+    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom right
+    TileVertex { position: [0.5, 0.5, 0.1] },    // top left
+    TileVertex { position: [0.5, -0.5, 0.1] },   // bottom left
+    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom right
 
     // Bottom (y = -0.5)
-    TileVertex { position: [-0.5, -0.5, -0.09] },  // bottom left
-    TileVertex { position: [0.5, -0.5, -0.09] },   // bottom right
-    TileVertex { position: [0.5, -0.5, 0.09] },    // top right
-    TileVertex { position: [-0.5, -0.5, -0.09] },  // bottom left
-    TileVertex { position: [0.5, -0.5, 0.09] },    // top right
-    TileVertex { position: [-0.5, -0.5, 0.09] },   // top left
+    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
+    TileVertex { position: [0.5, -0.5, -0.1] },   // bottom right
+    TileVertex { position: [0.5, -0.5, 0.1] },    // top right
+    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
+    TileVertex { position: [0.5, -0.5, 0.1] },    // top right
+    TileVertex { position: [-0.5, -0.5, 0.1] },   // top left
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -106,9 +112,6 @@ enum Tile {
     Red,
     Yellow
 }
-
-const ROWS: usize = 6;
-const COLS: usize = 7;
 
 // TODO: coalesce buffers (all have constant size)
 #[derive(Debug)]
@@ -133,9 +136,10 @@ impl Board {
 
         let mut c4 = C4;
         let mut re = png::Decoder::new(&mut c4).read_info().unwrap();
-        let mut data = [0u8; 4*700*600];
+        let mut data = [0u8; 4*64*64];
         re.next_frame(&mut data).unwrap();
         let i = re.info();
+        println!("{i:?}");
 
         let board_tex = dev.create_texture_with_data(
             q,
@@ -187,8 +191,8 @@ impl Board {
             BindGroupEntry {
                 binding: 1,
                 resource: BindingResource::Sampler(&dev.create_sampler(&SamplerDescriptor {
-                    address_mode_u: AddressMode::ClampToEdge,
-                    address_mode_v: AddressMode::ClampToEdge,
+                    address_mode_u: AddressMode::Repeat,
+                    address_mode_v: AddressMode::Repeat,
                     address_mode_w: AddressMode::ClampToEdge,
                     mag_filter: FilterMode::Linear,
                     min_filter: FilterMode::Linear,
@@ -350,9 +354,9 @@ impl Board {
         let t = -near.z / dir.z;
         let hit = near + dir * t;
 
-        if hit.x >= -3.5 && hit.x <= 3.5 && hit.y >= -3.0 && hit.y <= 3.0 {
+        if hit.x >= -HALF_COLS && hit.x <= HALF_COLS && hit.y >= -HALF_ROWS && hit.y <= HALF_ROWS {
             // Convert x position to column index (0-6)
-            let col = ((hit.x + 3.5) / 7.0 * COLS as f32) as u8;
+            let col = (hit.x + HALF_COLS) as u8;
             Some(col)
         } else {
             None
@@ -387,8 +391,8 @@ impl Board {
 
         if let Some(preview) = self.preview {
             let model_mat = Translation3::new(
-                preview as f32 - 3.,
-                4.,
+                preview as f32 - HALF_COLS + 0.5,
+                HALF_ROWS + 1.,
                 0.
             ).to_homogeneous();
             instances[inst] = TileInstance {
@@ -402,8 +406,8 @@ impl Board {
             for (j, tile) in row.iter().enumerate() {
                 if let Some(tile) = tile {
                     let model_mat = Translation3::new(
-                        j as f32 - 3.,
-                        2.5 - i as f32,
+                        j as f32 - HALF_COLS + 0.5,
+                        HALF_ROWS - 0.5 - i as f32,
                         0.
                     ).to_homogeneous();
                     instances[inst] = TileInstance {

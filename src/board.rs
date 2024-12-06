@@ -15,40 +15,44 @@ const HALF_COLS: f32 = COLS as f32 / 2.;
 struct BoardVertex {
     position: [f32; 3],
     coord: [f32; 2],
+    normal: [f32; 3]
 }
 
 const BOARD_VERTICES: &[BoardVertex] = &[
     // Front
-    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },  // top left
-    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, 0.1], coord: [0., ROWS as f32] }, // bottom left
-    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [COLS as f32, ROWS as f32] },  // bottom right
-    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },  // top left
-    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [COLS as f32, ROWS as f32] },  // bottom right
-    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [COLS as f32, 0.] },   // top right
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.], normal: [0., 0., 1.] },  // top left
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, 0.1], coord: [0., ROWS as f32], normal: [0., 0., 1.] }, // bottom left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [COLS as f32, ROWS as f32], normal: [0., 0., 1.] },  // bottom right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [COLS as f32, 0.], normal: [0., 0., 1.] },   // top right
 
     // Back
-    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [COLS as f32, 0.] },  // top right
-    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., ROWS as f32] },  // bottom left
-    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [COLS as f32, ROWS as f32] }, // bottom right
-    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [COLS as f32, 0.] },  // top right
-    BoardVertex { position: [HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.] },   // top left
-    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., ROWS as f32] },  // bottom left
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [COLS as f32, 0.], normal: [0., 0., -1.] },  // top right
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., ROWS as f32], normal: [0., 0., -1.] },  // bottom left
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [COLS as f32, ROWS as f32], normal: [0., 0., -1.] }, // bottom right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.], normal: [0., 0., -1.] },   // top left
 
     // Left
-    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.] },   // top left
-    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom left
-    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top right
-    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top right
-    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom left
-    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, 0.1], coord: [0., 0.] },   // bottom right
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.], normal: [-1., 0., 0.] },   // top left
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.], normal: [-1., 0., 0.] },  // bottom left
+    BoardVertex { position: [-HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.], normal: [-1., 0., 0.] },    // top right
+    BoardVertex { position: [-HALF_COLS, -HALF_ROWS, 0.1], coord: [0., 0.], normal: [-1., 0., 0.] },   // bottom right
 
     // Right
-    BoardVertex { position: [HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.] },   // top right
-    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top left
-    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom right
-    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.] },    // top left
-    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [0., 0.] },   // bottom left
-    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.] },  // bottom right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, -0.1], coord: [0., 0.], normal: [1., 0., 0.] },   // top right
+    BoardVertex { position: [HALF_COLS, HALF_ROWS, 0.1], coord: [0., 0.], normal: [1., 0., 0.] },    // top left
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, -0.1], coord: [0., 0.], normal: [1., 0., 0.] },  // bottom right
+    BoardVertex { position: [HALF_COLS, -HALF_ROWS, 0.1], coord: [0., 0.], normal: [1., 0., 0.] },   // bottom left
+];
+
+const BOARD_INDICES: &[u16] = &[
+    // Front
+    0, 1, 2, 0, 2, 3,
+    // Back
+    4, 5, 6, 4, 7, 5,
+    // Left
+    8, 9, 10, 10, 9, 11,
+    // Right
+    12, 13, 14, 14, 13, 15
 ];
 
 #[repr(C)]
@@ -140,6 +144,7 @@ enum Tile {
 pub struct Board {
     board_pip: RenderPipeline,
     board_vertices: Buffer,
+    board_indices: Buffer,
 
     tile_pip: RenderPipeline,
     tile_vertices: Buffer,
@@ -170,7 +175,7 @@ impl Board {
                 buffers: &[VertexBufferLayout {
                     array_stride: std::mem::size_of::<BoardVertex>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
-                    attributes: &vertex_attr_array![0 => Float32x3, 1 => Float32x2],
+                    attributes: &vertex_attr_array![0 => Float32x3, 1 => Float32x2, 2 => Float32x3],
                 }],
                 compilation_options: PipelineCompilationOptions::default()
             },
@@ -208,6 +213,11 @@ impl Board {
             label: None,
             contents: cast_slice(BOARD_VERTICES),
             usage: BufferUsages::VERTEX
+        });
+        let board_indices = dev.create_buffer_init(&BufferInitDescriptor {
+            label: None,
+            contents: cast_slice(BOARD_INDICES),
+            usage: BufferUsages::INDEX
         });
 
         let tile_shader = dev.create_shader_module(include_wgsl!("tile.wgsl"));
@@ -296,7 +306,7 @@ impl Board {
         // tiles[0][0] = Some(Tile::Red);
         // tiles[1][2] = Some(Tile::Yellow);
 
-        Self { board_pip, board_vertices, tile_pip, tile_vertices, tile_indices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red, win: None }
+        Self { board_pip, board_vertices, board_indices, tile_pip, tile_vertices, tile_indices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red, win: None }
     }
 
     fn column_from_ndc(x: f32, y: f32, view_proj_inv: &Matrix4<f32>) -> Option<u8> {
@@ -452,7 +462,8 @@ impl Board {
         
         rpass.set_pipeline(&self.board_pip);
         rpass.set_vertex_buffer(0, self.board_vertices.slice(..));
+        rpass.set_index_buffer(self.board_indices.slice(..), IndexFormat::Uint16);
         rpass.set_bind_group(0, camera_bg, &[]);
-        rpass.draw(0..BOARD_VERTICES.len() as u32, 0..1);
+        rpass.draw_indexed(0..BOARD_INDICES.len() as u32, 0, 0..1);
     }
 }

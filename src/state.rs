@@ -112,11 +112,8 @@ impl State {
     }
 
     pub fn mouse_click(&mut self) {
-        let Some(pos) = self.last_mouse else { return };
-        let sz = self.win.inner_size();
-        let x = pos.x as f32 / sz.width as f32 * 2. - 1.;
-        let y = 1. - pos.y as f32 / sz.height as f32 * 2.;
-        self.bd.drop_tile(x, y, &self.cam.view_proj_inv());
+        self.update_preview();
+        self.bd.drop_tile();
     }
 
     pub fn render(&mut self) {

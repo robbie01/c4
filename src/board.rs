@@ -1,7 +1,7 @@
 use std::{mem, num::NonZero};
 
 use bytemuck::{Pod, Zeroable, cast_slice, cast_slice_mut};
-use nalgebra::{Matrix4, Point3, Translation3};
+use nalgebra::{Isometry3, Matrix4, Point3, Translation3, UnitQuaternion, Vector3};
 use wgpu::{*, util::{BufferInitDescriptor, DeviceExt as _}};
 
 const ROWS: usize = 6;
@@ -151,6 +151,8 @@ pub struct Board {
     tile_indices: Buffer,
     tile_instances: Buffer,
     num_tiles: usize,
+
+    preview_rotation: UnitQuaternion<f32>,
 
     preview: Option<u8>,
     current_player: Tile,
@@ -306,7 +308,12 @@ impl Board {
         // tiles[0][0] = Some(Tile::Red);
         // tiles[1][2] = Some(Tile::Yellow);
 
-        Self { board_pip, board_vertices, board_indices, tile_pip, tile_vertices, tile_indices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red, win: None }
+        Self {
+            board_pip, board_vertices, board_indices,
+            tile_pip, tile_vertices, tile_indices, tile_instances,
+            preview_rotation: UnitQuaternion::identity(),
+            tiles, num_tiles: 0, preview: None, current_player: Tile::Red, win: None
+        }
     }
 
     fn column_from_ndc(x: f32, y: f32, view_proj_inv: &Matrix4<f32>) -> Option<u8> {
@@ -384,12 +391,12 @@ impl Board {
         None
     }
 
-    pub fn drop_tile(&mut self, x: f32, y: f32, view_proj_inv: &Matrix4<f32>) {
+    pub fn drop_tile(&mut self) {
         if self.win.is_some() {
             return;
         }
 
-        if let Some(col) = Self::column_from_ndc(x, y, view_proj_inv) {
+        if let Some(col) = self.preview {
             let col = col as usize;
             for row in self.tiles.iter_mut().rev() {
                 if row[col].is_none() {
@@ -417,17 +424,22 @@ impl Board {
         let mut inst = 0;
 
         if let Some(preview) = self.preview {
-            let model_mat = Translation3::new(
-                preview as f32 - HALF_COLS + 0.5,
-                HALF_ROWS + 1.,
-                0.
-            ).to_homogeneous();
+            let model = Isometry3::from_parts(
+                Translation3::new(
+                    preview as f32 - HALF_COLS + 0.5,
+                    HALF_ROWS + 1.,
+                    0.
+                ),
+                self.preview_rotation
+            );
             instances[inst] = TileInstance {
-                model_mat,
+                model_mat: model.to_homogeneous(),
                 color: [0.5, 0.5, 0.5, 0.5]
             };
             inst += 1;
         }
+
+        self.preview_rotation = self.preview_rotation.append_axisangle_linearized(&(0.04f32 * Vector3::y()));
 
         for (i, row) in self.tiles.iter().enumerate() {
             for (j, tile) in row.iter().enumerate() {

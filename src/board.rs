@@ -261,7 +261,7 @@ impl Board {
                 entry_point: None,
                 targets: &[Some(ColorTargetState {
                     format: fmt,
-                    blend: Some(BlendState::ALPHA_BLENDING), //Some(BlendState::REPLACE),
+                    blend: Some(BlendState::REPLACE),
                     write_mask: ColorWrites::ALL,
                 })],
                 compilation_options: PipelineCompilationOptions::default()
@@ -269,7 +269,7 @@ impl Board {
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
                 front_face: FrontFace::Ccw,
-                cull_mode: None, //Some(Face::Back),
+                cull_mode: Some(Face::Back),
                 polygon_mode: PolygonMode::Fill,
                 ..Default::default()
             },
@@ -424,6 +424,7 @@ impl Board {
         let mut inst = 0;
 
         if let Some(preview) = self.preview {
+            // TODO: use OIT for preview and reenable alpha
             let model = Isometry::from_parts(
                 Translation3::new(
                     preview as f32 - HALF_COLS + 0.5,

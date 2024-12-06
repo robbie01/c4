@@ -64,31 +64,52 @@ struct TileInstance {
     color: [f32; 4]
 }
 
-const TILE_VERTICES: &[TileVertex] = &[
-    // Front
-    TileVertex { position: [-0.5, 0.5, 0.1], },  // top left
-    TileVertex { position: [-0.5, -0.5, 0.1], }, // bottom left
-    TileVertex { position: [0.5, -0.5, 0.1], },  // bottom right
-    TileVertex { position: [0.5, 0.5, 0.1], },   // top right
+const FRAC_SQRT3_4: f32 = 0.43301270189221932338186158537646809173570131345259515701395174486298325422;
 
-    // Back
-    TileVertex { position: [0.5, 0.5, -0.1] },   // top left
-    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom left
-    TileVertex { position: [-0.5, -0.5, -0.1] }, // bottom right
-    TileVertex { position: [-0.5, 0.5, -0.1] },  // top right
+const TILE_VERTICES: &[TileVertex] = &[
+    // Front hexagon
+    TileVertex { position: [0.5, 0., 0.1], },
+    TileVertex { position: [0.25, FRAC_SQRT3_4, 0.1], },
+    TileVertex { position: [-0.25, FRAC_SQRT3_4, 0.1], },
+    TileVertex { position: [-0.5, 0., 0.1], },
+    TileVertex { position: [-0.25, -FRAC_SQRT3_4, 0.1], },
+    TileVertex { position: [0.25, -FRAC_SQRT3_4, 0.1], },
+
+    // Back hexagon
+    TileVertex { position: [FRAC_SQRT3_4, 0.25, -0.1], },
+    TileVertex { position: [0., 0.5, -0.1], },
+    TileVertex { position: [-FRAC_SQRT3_4, 0.25, -0.1], },
+    TileVertex { position: [-FRAC_SQRT3_4, -0.25, -0.1], },
+    TileVertex { position: [0., -0.5, -0.1], },
+    TileVertex { position: [FRAC_SQRT3_4, -0.25, -0.1], },
 ];
 
 const TILE_INDICES: &[u16] = &[
     // Front
-    0, 1, 2, 0, 2, 3,
+    0, 1, 2,
+    0, 2, 3,
+    0, 3, 4,
+    0, 4, 5,
+
     // Back
-    4, 5, 6, 4, 6, 7,
-    // Left
-    0, 7, 6, 0, 6, 1,
-    // Right
-    4, 3, 2, 4, 2, 5,
-    // Bottom
-    1, 6, 5, 1, 5, 2
+    6, 8, 7,
+    6, 9, 8,
+    6, 10, 9,
+    6, 11, 10,
+
+    // Side triangles (hexagonal antiprism)
+    0, 6, 1,
+    1, 6, 7,
+    1, 7, 2,
+    2, 7, 8,
+    2, 8, 3,
+    3, 8, 9,
+    3, 9, 4,
+    4, 9, 10,
+    4, 10, 5,
+    5, 10, 11,
+    5, 11, 0,
+    0, 11, 6
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

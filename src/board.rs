@@ -1,7 +1,7 @@
 use std::{mem, num::NonZero};
 
 use bytemuck::{Pod, Zeroable, cast_slice, cast_slice_mut};
-use nalgebra::{Isometry3, Matrix4, Point3, Translation3, UnitQuaternion, Vector3};
+use nalgebra::{Isometry, Matrix4, Point3, Translation3, UnitQuaternion, Vector3};
 use wgpu::{*, util::{BufferInitDescriptor, DeviceExt as _}};
 
 const ROWS: usize = 6;
@@ -424,7 +424,7 @@ impl Board {
         let mut inst = 0;
 
         if let Some(preview) = self.preview {
-            let model = Isometry3::from_parts(
+            let model = Isometry::from_parts(
                 Translation3::new(
                     preview as f32 - HALF_COLS + 0.5,
                     HALF_ROWS + 1.,

@@ -76,20 +76,26 @@ impl Camera {
         self.needs_update = true;
     }
 
+    fn update_view_proj(&mut self) {
+        let rot = UnitQuaternion::from_axis_angle(&self.up, self.angle);
+        let eye = Isometry3::rotation_wrt_point(rot, self.target) * &self.eye;
+        let view = Matrix4::look_at_rh(&eye, &self.target, &self.up);
+        self.cached_view_proj = self.proj.as_matrix() * view;
+        self.cached_view_proj_inv = self.cached_view_proj.try_inverse().unwrap();
+        self.needs_update = false;
+    }
+
     pub fn view_proj(&mut self) -> Matrix4<f32> {
         if self.needs_update {
-            let rot = UnitQuaternion::from_axis_angle(&self.up, self.angle);
-            let eye = Isometry3::rotation_wrt_point(rot, self.target) * &self.eye;
-            let view = Matrix4::look_at_rh(&eye, &self.target, &self.up);
-            self.cached_view_proj = self.proj.as_matrix() * view;
-            self.cached_view_proj_inv = self.cached_view_proj.try_inverse().unwrap();
-            self.needs_update = false;
+            self.update_view_proj();
         }
         self.cached_view_proj
     }
 
     pub fn view_proj_inv(&mut self) -> Matrix4<f32> {
-        self.view_proj();
+        if self.needs_update {
+            self.update_view_proj();
+        }
         self.cached_view_proj_inv
     }
 

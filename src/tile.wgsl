@@ -36,6 +36,8 @@ fn vs_main(
     var out: VertexOutput;
     out.clip_position = camera.view_proj * model_mat * vec4<f32>(model.position, 1.0);
     out.color = instance.color;
+
+    // this only works because there is no scaling involved
     out.normal = (model_mat * vec4<f32>(model.normal, 0.0)).xyz;;
     return out;
 }

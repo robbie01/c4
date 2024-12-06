@@ -54,7 +54,8 @@ const BOARD_VERTICES: &[BoardVertex] = &[
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 struct TileVertex {
-    position: [f32; 3]
+    position: [f32; 3],
+    normal: [f32; 3]
 }
 
 #[repr(C)]
@@ -68,20 +69,36 @@ const FRAC_SQRT3_4: f32 = 0.4330127018922193233818615853764680917357013134525951
 
 const TILE_VERTICES: &[TileVertex] = &[
     // Front hexagon
-    TileVertex { position: [0.5, 0., 0.1], },
-    TileVertex { position: [0.25, FRAC_SQRT3_4, 0.1], },
-    TileVertex { position: [-0.25, FRAC_SQRT3_4, 0.1], },
-    TileVertex { position: [-0.5, 0., 0.1], },
-    TileVertex { position: [-0.25, -FRAC_SQRT3_4, 0.1], },
-    TileVertex { position: [0.25, -FRAC_SQRT3_4, 0.1], },
+    TileVertex { position: [0.5, 0., 0.1], normal: [0., 0., 1.] },
+    TileVertex { position: [0.25, FRAC_SQRT3_4, 0.1], normal: [0., 0., 1.] },
+    TileVertex { position: [-0.25, FRAC_SQRT3_4, 0.1], normal: [0., 0., 1.] },
+    TileVertex { position: [-0.5, 0., 0.1], normal: [0., 0., 1.] },
+    TileVertex { position: [-0.25, -FRAC_SQRT3_4, 0.1], normal: [0., 0., 1.] },
+    TileVertex { position: [0.25, -FRAC_SQRT3_4, 0.1], normal: [0., 0., 1.] },
 
     // Back hexagon
-    TileVertex { position: [FRAC_SQRT3_4, 0.25, -0.1], },
-    TileVertex { position: [0., 0.5, -0.1], },
-    TileVertex { position: [-FRAC_SQRT3_4, 0.25, -0.1], },
-    TileVertex { position: [-FRAC_SQRT3_4, -0.25, -0.1], },
-    TileVertex { position: [0., -0.5, -0.1], },
-    TileVertex { position: [FRAC_SQRT3_4, -0.25, -0.1], },
+    TileVertex { position: [FRAC_SQRT3_4, 0.25, -0.1], normal: [0., 0., -1.] },
+    TileVertex { position: [0., 0.5, -0.1], normal: [0., 0., -1.] },
+    TileVertex { position: [-FRAC_SQRT3_4, 0.25, -0.1], normal: [0., 0., -1.] },
+    TileVertex { position: [-FRAC_SQRT3_4, -0.25, -0.1], normal: [0., 0., -1.] },
+    TileVertex { position: [0., -0.5, -0.1], normal: [0., 0., -1.] },
+    TileVertex { position: [FRAC_SQRT3_4, -0.25, -0.1], normal: [0., 0., -1.] },
+
+    // Front hexagon (for side triangles)
+    TileVertex { position: [0.5, 0., 0.1], normal: [1., 0., 0.] },
+    TileVertex { position: [0.25, FRAC_SQRT3_4, 0.1], normal: [0.5, 2.*FRAC_SQRT3_4, 0.] },
+    TileVertex { position: [-0.25, FRAC_SQRT3_4, 0.1], normal: [-0.5, 2.*FRAC_SQRT3_4, 0.] },
+    TileVertex { position: [-0.5, 0., 0.1], normal: [-1., 0., 0.] },
+    TileVertex { position: [-0.25, -FRAC_SQRT3_4, 0.1], normal: [-0.5, -2.*FRAC_SQRT3_4, 0.] },
+    TileVertex { position: [0.25, -FRAC_SQRT3_4, 0.1], normal: [0.5, -2.*FRAC_SQRT3_4, 0.] },
+
+    // Back hexagon (for side triangles)
+    TileVertex { position: [FRAC_SQRT3_4, 0.25, -0.1], normal: [2.*FRAC_SQRT3_4, 0.5, 0.] },
+    TileVertex { position: [0., 0.5, -0.1], normal: [0., 1., 0.] },
+    TileVertex { position: [-FRAC_SQRT3_4, 0.25, -0.1], normal: [-2.*FRAC_SQRT3_4, 0.5, 0.] },
+    TileVertex { position: [-FRAC_SQRT3_4, -0.25, -0.1], normal: [-2.*FRAC_SQRT3_4, -0.5, 0.] },
+    TileVertex { position: [0., -0.5, -0.1], normal: [0., -1., 0.] },
+    TileVertex { position: [FRAC_SQRT3_4, -0.25, -0.1], normal: [2.*FRAC_SQRT3_4, -0.5, 0.] },
 ];
 
 const TILE_INDICES: &[u16] = &[
@@ -98,18 +115,18 @@ const TILE_INDICES: &[u16] = &[
     6, 11, 10,
 
     // Side triangles (hexagonal antiprism)
-    0, 6, 1,
-    1, 6, 7,
-    1, 7, 2,
-    2, 7, 8,
-    2, 8, 3,
-    3, 8, 9,
-    3, 9, 4,
-    4, 9, 10,
-    4, 10, 5,
-    5, 10, 11,
-    5, 11, 0,
-    0, 11, 6
+    12, 18, 13,
+    13, 18, 19,
+    13, 19, 14,
+    14, 19, 20,
+    14, 20, 15,
+    15, 20, 21,
+    15, 21, 16,
+    16, 21, 22,
+    16, 22, 17,
+    17, 22, 23,
+    17, 23, 12,
+    12, 23, 18
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -210,7 +227,7 @@ impl Board {
                     VertexBufferLayout {
                         array_stride: std::mem::size_of::<TileVertex>() as BufferAddress,
                         step_mode: VertexStepMode::Vertex,
-                        attributes: &vertex_attr_array![0 => Float32x3],
+                        attributes: &vertex_attr_array![0 => Float32x3, 1 => Float32x3],
                     },
                     // Instance
                     VertexBufferLayout {

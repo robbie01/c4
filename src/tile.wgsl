@@ -7,6 +7,7 @@ var<uniform> camera: CameraUniform;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
+    @location(1) normal: vec3<f32>,
 };
 
 struct InstanceInput {
@@ -22,6 +23,8 @@ struct VertexOutput {
     @location(0) color: vec4<f32>
 };
 
+const LIGHT_SOURCE = vec3<f32>(0.5773502691896257, 0.5773502691896257, 0.5773502691896257);
+
 @vertex
 fn vs_main(
     model: VertexInput,
@@ -30,7 +33,7 @@ fn vs_main(
     let model_mat = mat4x4(instance.model0, instance.model1, instance.model2, instance.model3);
     var out: VertexOutput;
     out.clip_position = camera.view_proj * model_mat * vec4<f32>(model.position, 1.0);
-    out.color = instance.color;
+    out.color = instance.color * (dot(model.normal, LIGHT_SOURCE) + 1.0) / 2.0;
     return out;
 }
 

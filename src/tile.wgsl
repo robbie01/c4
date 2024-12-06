@@ -38,7 +38,7 @@ fn vs_main(
     out.color = instance.color;
 
     // this only works because there is no scaling involved
-    out.normal = (model_mat * vec4<f32>(model.normal, 0.0)).xyz;;
+    out.normal = (model_mat * vec4<f32>(model.normal, 0.0)).xyz;
     return out;
 }
 

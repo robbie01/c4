@@ -69,41 +69,26 @@ const TILE_VERTICES: &[TileVertex] = &[
     TileVertex { position: [-0.5, 0.5, 0.1], },  // top left
     TileVertex { position: [-0.5, -0.5, 0.1], }, // bottom left
     TileVertex { position: [0.5, -0.5, 0.1], },  // bottom right
-    TileVertex { position: [-0.5, 0.5, 0.1], },  // top left
-    TileVertex { position: [0.5, -0.5, 0.1], },  // bottom right
     TileVertex { position: [0.5, 0.5, 0.1], },   // top right
 
     // Back
-    TileVertex { position: [-0.5, 0.5, -0.1] },  // top right
+    TileVertex { position: [0.5, 0.5, -0.1] },   // top left
     TileVertex { position: [0.5, -0.5, -0.1] },  // bottom left
     TileVertex { position: [-0.5, -0.5, -0.1] }, // bottom right
     TileVertex { position: [-0.5, 0.5, -0.1] },  // top right
-    TileVertex { position: [0.5, 0.5, -0.1] },   // top left
-    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom left
+];
 
+const TILE_INDICES: &[u16] = &[
+    // Front
+    0, 1, 2, 0, 2, 3,
+    // Back
+    4, 5, 6, 4, 6, 7,
     // Left
-    TileVertex { position: [-0.5, 0.5, -0.1] },   // top left
-    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
-    TileVertex { position: [-0.5, 0.5, 0.1] },    // top right
-    TileVertex { position: [-0.5, 0.5, 0.1] },    // top right
-    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
-    TileVertex { position: [-0.5, -0.5, 0.1] },   // bottom right
-
+    0, 7, 6, 0, 6, 1,
     // Right
-    TileVertex { position: [0.5, 0.5, -0.1] },   // top right
-    TileVertex { position: [0.5, 0.5, 0.1] },    // top left
-    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom right
-    TileVertex { position: [0.5, 0.5, 0.1] },    // top left
-    TileVertex { position: [0.5, -0.5, 0.1] },   // bottom left
-    TileVertex { position: [0.5, -0.5, -0.1] },  // bottom right
-
-    // Bottom (y = -0.5)
-    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
-    TileVertex { position: [0.5, -0.5, -0.1] },   // bottom right
-    TileVertex { position: [0.5, -0.5, 0.1] },    // top right
-    TileVertex { position: [-0.5, -0.5, -0.1] },  // bottom left
-    TileVertex { position: [0.5, -0.5, 0.1] },    // top right
-    TileVertex { position: [-0.5, -0.5, 0.1] },   // top left
+    4, 3, 2, 4, 2, 5,
+    // Bottom
+    1, 6, 5, 1, 5, 2
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -120,6 +105,7 @@ pub struct Board {
 
     tile_pip: RenderPipeline,
     tile_vertices: Buffer,
+    tile_indices: Buffer,
     tile_instances: Buffer,
     num_tiles: usize,
 
@@ -253,6 +239,11 @@ impl Board {
             contents: cast_slice(TILE_VERTICES),
             usage: BufferUsages::VERTEX
         });
+        let tile_indices = dev.create_buffer_init(&BufferInitDescriptor {
+            label: None,
+            contents: cast_slice(TILE_INDICES),
+            usage: BufferUsages::INDEX
+        });
 
         let tile_instances = dev.create_buffer(&BufferDescriptor {
             label: None,
@@ -266,7 +257,7 @@ impl Board {
         // tiles[0][0] = Some(Tile::Red);
         // tiles[1][2] = Some(Tile::Yellow);
 
-        Self { board_pip, board_vertices, tile_pip, tile_vertices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red }
+        Self { board_pip, board_vertices, tile_pip, tile_vertices, tile_indices, tile_instances, tiles, num_tiles: 0, preview: None, current_player: Tile::Red }
     }
 
     fn column_from_ndc(x: f32, y: f32, view_proj_inv: &Matrix4<f32>) -> Option<u8> {
@@ -356,9 +347,10 @@ impl Board {
     pub fn render<'rpass>(&'rpass self, rpass: &mut RenderPass<'rpass>, camera_bg: &'rpass BindGroup) {
         rpass.set_pipeline(&self.tile_pip);
         rpass.set_vertex_buffer(0, self.tile_vertices.slice(..));
+        rpass.set_index_buffer(self.tile_indices.slice(..), IndexFormat::Uint16);
         rpass.set_vertex_buffer(1, self.tile_instances.slice(..));
         rpass.set_bind_group(0, camera_bg, &[]);
-        rpass.draw(0..TILE_VERTICES.len() as u32, 0..self.num_tiles as u32);
+        rpass.draw_indexed(0..TILE_INDICES.len() as u32, 0, 0..self.num_tiles as u32);
         
         rpass.set_pipeline(&self.board_pip);
         rpass.set_vertex_buffer(0, self.board_vertices.slice(..));

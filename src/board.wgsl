@@ -34,5 +34,5 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     if dist2 < 0.140625 {
         discard;
     }
-    return vec4<f32>(0.0, 0.0, 0.5, 1.0);
+    return vec4<f32>(0.0, 0.0, 0.5, 0.75);
 }

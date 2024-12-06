@@ -179,7 +179,7 @@ impl Board {
                 entry_point: None,
                 targets: &[Some(ColorTargetState {
                     format: fmt,
-                    blend: Some(BlendState::REPLACE),
+                    blend: Some(BlendState::ALPHA_BLENDING), //Some(BlendState::REPLACE),
                     write_mask: ColorWrites::ALL,
                 })],
                 compilation_options: PipelineCompilationOptions::default()
@@ -249,7 +249,7 @@ impl Board {
                 entry_point: None,
                 targets: &[Some(ColorTargetState {
                     format: fmt,
-                    blend: Some(BlendState::REPLACE),
+                    blend: Some(BlendState::ALPHA_BLENDING), //Some(BlendState::REPLACE),
                     write_mask: ColorWrites::ALL,
                 })],
                 compilation_options: PipelineCompilationOptions::default()
@@ -257,7 +257,7 @@ impl Board {
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
                 front_face: FrontFace::Ccw,
-                cull_mode: Some(Face::Back),
+                cull_mode: None, //Some(Face::Back),
                 polygon_mode: PolygonMode::Fill,
                 ..Default::default()
             },
@@ -414,7 +414,7 @@ impl Board {
             ).to_homogeneous();
             instances[inst] = TileInstance {
                 model_mat,
-                color: [0.5, 0.5, 0.5, 1.]
+                color: [0.5, 0.5, 0.5, 0.5]
             };
             inst += 1;
         }

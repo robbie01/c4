@@ -33,7 +33,7 @@ fn vs_main(
     let model_mat = mat4x4(instance.model0, instance.model1, instance.model2, instance.model3);
     var out: VertexOutput;
     out.clip_position = camera.view_proj * model_mat * vec4<f32>(model.position, 1.0);
-    out.color = instance.color * (dot(model.normal, LIGHT_SOURCE) + 1.0) / 2.0;
+    out.color = vec4<f32>(instance.color.rgb * (dot(model.normal, LIGHT_SOURCE) + 1.0) / 2.0, instance.color.a);
     return out;
 }
 

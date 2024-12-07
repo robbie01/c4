@@ -47,6 +47,6 @@ fn vs_main(
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let diffuse_intensity = clamp(dot(in.normal, LIGHT_SOURCE), 0.0, 1.0);
-    let intensity = clamp(AMBIENT_INTENSITY + diffuse_intensity, 0.0, 1.0);
+    let intensity = AMBIENT_INTENSITY + diffuse_intensity; // TODO: clamp if SDR
     return vec4<f32>(in.color.rgb * intensity, in.color.a);
 }

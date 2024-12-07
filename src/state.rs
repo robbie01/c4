@@ -38,11 +38,23 @@ impl State {
             compatible_surface: Some(&sfc),
             power_preference: PowerPreference::HighPerformance,
             ..Default::default()
-        }).block_on().unwrap();
+            })
+            .block_on()
+            .unwrap();
+
+        let caps = sfc.get_capabilities(&adpt);
+        println!("{caps:?}");
 
         let mut cfg = sfc.get_default_config(&adpt, sz.width, sz.height).unwrap();
         cfg.present_mode = PresentMode::Fifo;
-        let (dev, q) = adpt.request_device(&Default::default(), None).block_on().unwrap();
+        if caps.formats.contains(&TextureFormat::Rgba16Float) {
+            println!("HDR supported");
+            cfg.format = TextureFormat::Rgba16Float;
+        }
+        let (dev, q) = adpt
+            .request_device(&Default::default(), None)
+            .block_on()
+            .unwrap();
         sfc.configure(&dev, &cfg);
 
         let depth_cfg = TextureDescriptor {

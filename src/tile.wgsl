@@ -56,7 +56,7 @@ fn alpha_dithered(pos: vec2<f32>, alpha: f32) -> bool {
     let x = i32(pos.x) % BAYER_MATRIX_SIZE;
     let y = i32(pos.y) % BAYER_MATRIX_SIZE;
     let index = x + y * BAYER_MATRIX_SIZE;
-    // Bias the bayer matrix so that 1.0 isn't overrepresented
+    // Bias the bayer matrix to undo an inherent 1.0 bias
     let dither = BAYER_MATRIX[index] + 1. / (2. * f32(BAYER_MATRIX_SIZE * BAYER_MATRIX_SIZE));
     return dither < alpha;
 }

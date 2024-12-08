@@ -19,7 +19,7 @@ struct InstanceInput {
 }
 
 struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
+    @builtin(position) pos: vec4<f32>,
     @location(0) color: vec4<f32>,
     @location(1) @interpolate(flat) normal: vec3<f32>
 };
@@ -34,7 +34,7 @@ fn vs_main(
 ) -> VertexOutput {
     let model_mat = mat4x4(instance.model0, instance.model1, instance.model2, instance.model3);
     var out: VertexOutput;
-    out.clip_position = camera.view_proj * model_mat * vec4<f32>(model.position, 1.0);
+    out.pos = camera.view_proj * model_mat * vec4<f32>(model.position, 1.0); // clip position
     out.color = instance.color;
 
     // this only works because there is no scaling involved
@@ -44,9 +44,29 @@ fn vs_main(
 
 // Fragment shader
 
+const BAYER_MATRIX_SIZE: i32 = 4;
+const BAYER_MATRIX: array<f32, 16> = array<f32, 16>(
+    0.0, 0.5, 0.125, 0.625,
+    0.75, 0.25, 0.875, 0.375,
+    0.1875, 0.6875, 0.0625, 0.5625,
+    0.9375, 0.4375, 0.8125, 0.3125
+);
+
+fn alpha_dithered(pos: vec2<f32>, alpha: f32) -> bool {
+    let x = i32(pos.x) % BAYER_MATRIX_SIZE;
+    let y = i32(pos.y) % BAYER_MATRIX_SIZE;
+    let index = x + y * BAYER_MATRIX_SIZE;
+    // Bias the bayer matrix so that 1.0 isn't overrepresented
+    let dither = BAYER_MATRIX[index] + 1. / (2. * f32(BAYER_MATRIX_SIZE * BAYER_MATRIX_SIZE));
+    return dither < alpha;
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let diffuse_intensity = clamp(dot(in.normal, LIGHT_SOURCE), 0.0, 1.0);
     let intensity = AMBIENT_INTENSITY + diffuse_intensity; // TODO: clamp if SDR
-    return vec4<f32>(in.color.rgb * intensity, in.color.a);
+    if !alpha_dithered(in.pos.xy, in.color.a) {
+        discard;
+    }
+    return vec4<f32>(in.color.rgb * intensity, 1.0);
 }

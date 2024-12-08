@@ -1,4 +1,4 @@
-use std::{mem, num::NonZero};
+use std::{f32::consts::PI, mem, num::NonZero};
 
 use bytemuck::{Pod, Zeroable, cast_slice, cast_slice_mut};
 use nalgebra::{Isometry, Matrix4, Point3, Translation3, UnitQuaternion, Vector3};
@@ -158,6 +158,11 @@ pub struct Board {
     current_player: Tile,
     win: Option<Tile>,
     tiles: [[Option<Tile>; COLS]; ROWS]
+}
+
+fn smoothstep(x: f32, a: i32) -> f32 {
+    let x_a = x.powi(a);
+    x_a / (x_a + (1. - x).powi(a))
 }
 
 impl Board {
@@ -433,9 +438,11 @@ impl Board {
                 ),
                 self.preview_rotation
             );
+            let t = 1. - ((2. * self.preview_rotation.angle() / PI + 1.) % 2. - 1.).abs();
+            let alpha = smoothstep(t, 2);
             instances[inst] = TileInstance {
                 model_mat: model.to_homogeneous(),
-                color: [0.5, 0.5, 0.5, 0.5]
+                color: [0.5, 0.5, 0.5, alpha]
             };
             inst += 1;
         }

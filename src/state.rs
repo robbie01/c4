@@ -80,6 +80,8 @@ impl State {
         let cam = Camera::new(&dev, aspect);
         let bd = Board::new(&dev, &q, cfg.format, cam.bind_group_layout());
 
+        win.set_visible(true);
+
         Self {
             win, sfc, dev, q, cam, cfg, bd, depth_cfg, depth, depth_view,
             horiz_right: false,

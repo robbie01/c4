@@ -14,6 +14,7 @@ impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let win = event_loop.create_window(Window::default_attributes()
             .with_title("Connect 4")
+            .with_visible(false)
         ).unwrap();
         self.state = Some(State::new(win));
     }

@@ -46,18 +46,17 @@ fn vs_main(
 
 const BAYER_MATRIX_SIZE: i32 = 4;
 const BAYER_MATRIX: array<f32, 16> = array<f32, 16>(
-    0.0, 0.5, 0.125, 0.625,
-    0.75, 0.25, 0.875, 0.375,
-    0.1875, 0.6875, 0.0625, 0.5625,
-    0.9375, 0.4375, 0.8125, 0.3125
+    0.03125, 0.53125, 0.15625, 0.65625,
+    0.78125, 0.28125, 0.90625, 0.40625,
+    0.21875, 0.71875, 0.09375, 0.59375,
+    0.96875, 0.46875, 0.84375, 0.34375
 );
 
 fn alpha_dithered(pos: vec2<f32>, alpha: f32) -> bool {
     let x = i32(pos.x) % BAYER_MATRIX_SIZE;
     let y = i32(pos.y) % BAYER_MATRIX_SIZE;
     let index = x + y * BAYER_MATRIX_SIZE;
-    // Bias the bayer matrix to undo an inherent 1.0 bias
-    let dither = BAYER_MATRIX[index] + 1. / (2. * f32(BAYER_MATRIX_SIZE * BAYER_MATRIX_SIZE));
+    let dither = BAYER_MATRIX[index];
     return dither < alpha;
 }
 

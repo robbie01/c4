@@ -45,6 +45,7 @@ fn vs_main(
 // Fragment shader
 
 const BAYER_MATRIX_SIZE: i32 = 4;
+// Biased Bayer matrix, values are equally likely be represented as the zero and one patterns
 const BAYER_MATRIX: array<f32, 16> = array<f32, 16>(
     0.03125, 0.53125, 0.15625, 0.65625,
     0.78125, 0.28125, 0.90625, 0.40625,

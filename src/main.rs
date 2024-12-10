@@ -4,6 +4,7 @@ use winit::{application::ApplicationHandler, event::{ElementState, MouseButton, 
 mod camera;
 mod state;
 mod board;
+mod skybox;
 
 #[derive(Debug, Default)]
 struct App {

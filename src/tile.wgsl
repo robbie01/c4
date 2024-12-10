@@ -25,7 +25,7 @@ struct VertexOutput {
 };
 
 const AMBIENT_INTENSITY: f32 = 0.1;
-const LIGHT_SOURCE = vec3<f32>(0.5773502691896257, 0.5773502691896257, 0.5773502691896257);
+const LIGHT_SOURCE = vec3<f32>(0., 0., 1.);
 
 @vertex
 fn vs_main(

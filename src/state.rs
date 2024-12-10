@@ -4,7 +4,7 @@ use pollster::FutureExt;
 use wgpu::*;
 use winit::{dpi::{PhysicalPosition, PhysicalSize}, window::Window};
 
-use crate::{board::Board, camera::Camera};
+use crate::{board::Board, camera::Camera, skybox::Skybox};
 
 #[derive(Debug)]
 pub struct State {
@@ -16,6 +16,7 @@ pub struct State {
     depth_view: TextureView,
     dev: Device,
     q: Queue,
+    sky: Skybox,
     cam: Camera,
     bd: Board,
     last_mouse: Option<PhysicalPosition<f64>>,
@@ -77,13 +78,14 @@ impl State {
 
         let aspect = sz.width as f32 / sz.height as f32;
 
+        let sky = Skybox::new(&dev, &q, cfg.format);
         let cam = Camera::new(&dev, aspect);
         let bd = Board::new(&dev, &q, cfg.format, cam.bind_group_layout());
 
         win.set_visible(true);
 
         Self {
-            win, sfc, dev, q, cam, cfg, bd, depth_cfg, depth, depth_view,
+            win, sfc, dev, q, sky, cam, cfg, bd, depth_cfg, depth, depth_view,
             horiz_right: false,
             horiz_left: false,
             last_mouse: None
@@ -137,6 +139,7 @@ impl State {
 
         self.update_preview();
 
+        self.sky.prepare(&self.q, self.cam.view_proj_inv());
         let camerabg = self.cam.bind_group(&self.q);
         self.bd.prepare(&self.q);
 
@@ -170,6 +173,7 @@ impl State {
             }),
             ..Default::default()
         });
+        self.sky.render(&mut rpass);
         self.bd.render(&mut rpass, camerabg);
         drop(rpass);
 

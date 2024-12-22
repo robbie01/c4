@@ -4,6 +4,8 @@ use bytemuck::{Pod, Zeroable, cast_slice, cast_slice_mut};
 use nalgebra::{Isometry, Matrix4, Point3, Translation3, UnitQuaternion, Vector3};
 use wgpu::{*, util::{BufferInitDescriptor, DeviceExt as _}};
 
+use crate::camera::Camera;
+
 const ROWS: usize = 6;
 const COLS: usize = 7;
 
@@ -321,13 +323,13 @@ impl Board {
         }
     }
 
-    fn column_from_ndc(x: f32, y: f32, view_proj_inv: &Matrix4<f32>) -> Option<u8> {
+    fn column_from_ndc(x: f32, y: f32, camera: &mut Camera) -> Option<u8> {
         // X and Y are NDC
         // Sets self.preview to Some(0..7) if the mouse is over the board and None otherwise
         // Uses raycasting to intersect with z=0 plane
 
-        let near = view_proj_inv.transform_point(&Point3::new(x, y, -1.));
-        let far = view_proj_inv.transform_point(&Point3::new(x, y, 1.));
+        let near = camera.unproject_point(&Point3::new(x, y, -1.));
+        let far = camera.unproject_point(&Point3::new(x, y, 1.));
 
         // Find point collinear to near and far such that z=0
         let dir = far - near;
@@ -343,8 +345,8 @@ impl Board {
         }
     }
 
-    pub fn set_preview(&mut self, x: f32, y: f32, view_proj_inv: &Matrix4<f32>) {
-        self.preview = Self::column_from_ndc(x, y, view_proj_inv);
+    pub fn set_preview(&mut self, x: f32, y: f32, camera: &mut Camera) {
+        self.preview = Self::column_from_ndc(x, y, camera);
     }
 
     fn find_win(&self) -> Option<Tile> {

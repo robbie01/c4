@@ -16,7 +16,6 @@ pub struct Camera {
     bgl: BindGroupLayout,
     bg: BindGroup,
     cached_view_proj: Matrix4<f32>,
-    cached_view_proj_inv: Matrix4<f32>,
     needs_update: bool
 }
 
@@ -63,7 +62,6 @@ impl Camera {
             proj: Perspective3::new(aspect, 45. * PI / 180., 0.1, 100.),
             buf, bgl, bg,
             cached_view_proj: Matrix4::identity(),
-            cached_view_proj_inv: Matrix4::identity(),
             needs_update: true
         }
     }
@@ -83,7 +81,6 @@ impl Camera {
         let eye = Isometry3::rotation_wrt_point(rot, self.target) * &self.eye;
         self.view = Isometry3::look_at_rh(&eye, &self.target, &self.up);
         self.cached_view_proj = self.proj.as_matrix() * self.view.to_homogeneous();
-        self.cached_view_proj_inv = self.cached_view_proj.try_inverse().unwrap();
         self.needs_update = false;
     }
 
@@ -99,13 +96,6 @@ impl Camera {
             self.update_view_proj();
         }
         self.cached_view_proj
-    }
-
-    pub fn view_proj_inv(&mut self) -> Matrix4<f32> {
-        if self.needs_update {
-            self.update_view_proj();
-        }
-        self.cached_view_proj_inv
     }
 
     pub fn bind_group_layout(&self) -> &BindGroupLayout {

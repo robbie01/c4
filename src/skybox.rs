@@ -2,7 +2,7 @@ use std::{mem, num::NonZero};
 
 use bytemuck::{cast_slice_mut, Pod, Zeroable};
 use nalgebra::Point3;
-use util::{DeviceExt, TextureDataOrder};
+use util::{DeviceExt as _, TextureDataOrder};
 use wgpu::*;
 
 use crate::camera::Camera;

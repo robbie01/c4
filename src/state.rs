@@ -139,7 +139,7 @@ impl State {
 
         self.update_preview();
 
-        self.sky.prepare(&self.q, self.cam.view_proj_inv());
+        self.sky.prepare(&self.q, &mut self.cam);
         let camerabg = self.cam.bind_group(&self.q);
         self.bd.prepare(&self.q);
 

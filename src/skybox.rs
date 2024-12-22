@@ -1,9 +1,11 @@
 use std::{mem, num::NonZero};
 
-use bytemuck::from_bytes_mut;
-use nalgebra::Matrix4;
-use util::{BufferInitDescriptor, DeviceExt, TextureDataOrder};
+use bytemuck::{cast_slice_mut, Pod, Zeroable};
+use nalgebra::Point3;
+use util::{DeviceExt, TextureDataOrder};
 use wgpu::*;
+
+use crate::camera::Camera;
 
 const PX_PNG: &[u8] = include_bytes!("cubemap/px.png");
 const NX_PNG: &[u8] = include_bytes!("cubemap/nx.png");
@@ -24,7 +26,6 @@ fn png_to_bytes(mut png: &[u8]) -> (u32, u32, Vec<u8>) {
 
 #[derive(Debug)]
 pub struct Skybox {
-    view_proj_inv: Buffer,
     vertices: Buffer,
     pip: RenderPipeline,
     bg: BindGroup
@@ -36,8 +37,16 @@ const SKYBOX_VERTICES: &[[f32; 2]] = &[
     [-1., 3.]
 ];
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+struct SkyboxVertex {
+    pos: [f32; 2],
+    coord: Point3<f32>
+}
+
 impl Skybox {
     pub fn new(dev: &Device, q: &Queue, fmt: TextureFormat) -> Self {
+        // Double entendre: "px" for "pixel" and "positive x"
         let (px_w, px_h, mut px) = png_to_bytes(PX_PNG);
         let (nx_w, nx_h, mut nx) = png_to_bytes(NX_PNG);
         let (py_w, py_h, mut py) = png_to_bytes(PY_PNG);
@@ -69,16 +78,10 @@ impl Skybox {
             view_formats: &[]
         }, TextureDataOrder::LayerMajor, &px);
 
-        let vertices = dev.create_buffer_init(&BufferInitDescriptor {
+        let vertices = dev.create_buffer(&BufferDescriptor {
             label: None,
-            contents: bytemuck::cast_slice(SKYBOX_VERTICES),
-            usage: BufferUsages::VERTEX
-        });
-
-        let view_proj_inv = dev.create_buffer(&BufferDescriptor {
-            label: None,
-            size: mem::size_of::<Matrix4<f32>>() as u64,
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            size: (mem::size_of::<SkyboxVertex>()*SKYBOX_VERTICES.len()) as u64,
+            usage: BufferUsages::COPY_DST | BufferUsages::VERTEX,
             mapped_at_creation: false
         });
 
@@ -87,16 +90,6 @@ impl Skybox {
             entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: ShaderStages::VERTEX,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None
-                    },
-                    count: None
-                },
-                BindGroupLayoutEntry {
-                    binding: 1,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
                         sample_type: TextureSampleType::Float { filterable: true },
@@ -106,7 +99,7 @@ impl Skybox {
                     count: None
                 },
                 BindGroupLayoutEntry {
-                    binding: 2,
+                    binding: 1,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
                     count: None
@@ -128,13 +121,18 @@ impl Skybox {
                 module: &shader,
                 entry_point: None,
                 buffers: &[VertexBufferLayout {
-                    array_stride: mem::size_of::<[f32; 2]>() as u64,
+                    array_stride: mem::size_of::<SkyboxVertex>() as u64,
                     step_mode: VertexStepMode::Vertex,
                     attributes: &[
                         VertexAttribute {
                             format: VertexFormat::Float32x2,
                             offset: 0,
                             shader_location: 0
+                        },
+                        VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: mem::size_of::<[f32; 2]>() as u64,
+                            shader_location: 1
                         }
                     ]
                 }],
@@ -179,17 +177,13 @@ impl Skybox {
             entries: &[
                 BindGroupEntry {
                     binding: 0,
-                    resource: view_proj_inv.as_entire_binding()
-                },
-                BindGroupEntry {
-                    binding: 1,
                     resource: BindingResource::TextureView(&tex.create_view(&TextureViewDescriptor {
                         dimension: Some(TextureViewDimension::Cube),
                         ..Default::default()
                     }))
                 },
                 BindGroupEntry {
-                    binding: 2,
+                    binding: 1,
                     resource: BindingResource::Sampler(&dev.create_sampler(&SamplerDescriptor {
                         label: None,
                         address_mode_u: AddressMode::ClampToEdge,
@@ -204,15 +198,17 @@ impl Skybox {
         });
 
         Self {
-            view_proj_inv,
             vertices,
             pip, bg
         }
     }
 
-    pub fn prepare(&mut self, q: &Queue, view_proj_inv: Matrix4<f32>) {
-        let mut view = q.write_buffer_with(&self.view_proj_inv, 0, NonZero::new(self.view_proj_inv.size()).unwrap()).unwrap();
-        *from_bytes_mut(&mut view) = view_proj_inv;
+    pub fn prepare(&mut self, q: &Queue, cam: &mut Camera) {
+        let mut view = q.write_buffer_with(&self.vertices, 0, NonZero::new(self.vertices.size()).unwrap()).unwrap();
+        for (v, vert) in SKYBOX_VERTICES.iter().zip(cast_slice_mut::<_, SkyboxVertex>(&mut view)) {
+            vert.pos = *v;
+            vert.coord = cam.unproject_point(&Point3::new(v[0], v[1], 1.));
+        }
     }
 
     pub fn render<'rpass>(&'rpass self, rpass: &mut RenderPass<'rpass>) {

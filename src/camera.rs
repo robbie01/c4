@@ -10,6 +10,7 @@ pub struct Camera {
     angle: f32,
     target: Point3<f32>,
     up: UnitVector3<f32>,
+    view: Isometry3<f32>,
     proj: Perspective3<f32>,
     buf: Buffer,
     bgl: BindGroupLayout,
@@ -58,6 +59,7 @@ impl Camera {
             angle: 1.,
             target: Point3::origin(),
             up: UnitVector3::new_unchecked(Vector3::y()),
+            view: Isometry3::identity(),
             proj: Perspective3::new(aspect, 45. * PI / 180., 0.1, 100.),
             buf, bgl, bg,
             cached_view_proj: Matrix4::identity(),
@@ -79,10 +81,17 @@ impl Camera {
     fn update_view_proj(&mut self) {
         let rot = UnitQuaternion::from_axis_angle(&self.up, self.angle);
         let eye = Isometry3::rotation_wrt_point(rot, self.target) * &self.eye;
-        let view = Matrix4::look_at_rh(&eye, &self.target, &self.up);
-        self.cached_view_proj = self.proj.as_matrix() * view;
+        self.view = Isometry3::look_at_rh(&eye, &self.target, &self.up);
+        self.cached_view_proj = self.proj.as_matrix() * self.view.to_homogeneous();
         self.cached_view_proj_inv = self.cached_view_proj.try_inverse().unwrap();
         self.needs_update = false;
+    }
+
+    pub fn unproject_point(&mut self, pt: &Point3<f32>) -> Point3<f32> {
+        if self.needs_update {
+            self.update_view_proj();
+        }
+        self.view.inverse_transform_point(&self.proj.unproject_point(pt))
     }
 
     pub fn view_proj(&mut self) -> Matrix4<f32> {
